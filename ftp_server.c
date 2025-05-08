@@ -112,7 +112,29 @@ void *handle_client(void *client_sock) {
                 fclose(file);
                 send(sock, "226 Transfer complete.\r\n", 24, 0);
             }
-        } else {
+        } 
+        else if (strncmp(buffer, "LIST", 4) == 0) {
+            DIR *d;
+            struct dirent *dir;
+            d = opendir(FTP_DIRECTORY);
+            if (d) {
+                send(sock, "150 Here comes the directory listing.\r\n", 40, 0);
+                while ((dir = readdir(d)) != NULL) {
+                    // Skip "." and ".."
+                    if (strcmp(dir->d_name, ".") == 0 || strcmp(dir->d_name, "..") == 0)
+                        continue;
+        
+                    char entry[512];
+                    snprintf(entry, sizeof(entry), "%s\r\n", dir->d_name);
+                    send(sock, entry, strlen(entry), 0);
+                }
+                closedir(d);
+                send(sock, "226 Directory send OK.\r\n", 24, 0);
+            } else {
+                send(sock, "550 Failed to open directory.\r\n", 31, 0);
+            }
+        }
+        else {
             send(sock, "500 Command not recognized.\r\n", 28, 0);
         }
     }
