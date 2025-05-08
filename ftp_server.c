@@ -60,6 +60,8 @@ int main() {
     return 0;
 }
 
+#define FTP_DIRECTORY "/path/to/ftp_files" // Define a directory for storing and retrieving files
+
 void *handle_client(void *client_sock) {
     int sock = *(int *)client_sock;
     char buffer[BUFFER_SIZE];
@@ -77,7 +79,11 @@ void *handle_client(void *client_sock) {
             char filename[256];
             sscanf(buffer + 5, "%s", filename);
 
-            FILE *file = fopen(filename, "wb");
+            // Construct full path for storing the file in the FTP directory
+            char full_path[512];
+            snprintf(full_path, sizeof(full_path), "%s/%s", FTP_DIRECTORY, filename);
+
+            FILE *file = fopen(full_path, "wb");
             if (!file) {
                 send(sock, "550 File not created.\r\n", 22, 0);
             } else {
@@ -87,22 +93,15 @@ void *handle_client(void *client_sock) {
                 fclose(file);
                 send(sock, "226 File transfer successful.\r\n", 31, 0);
             }
-        } else if (strncmp(buffer, "LIST", 4) == 0) {
-            DIR *d = opendir(".");
-            struct dirent *dir;
-            send(sock, "150 Here comes the directory listing.\r\n", 40, 0);
-
-            while ((dir = readdir(d)) != NULL) {
-                send(sock, dir->d_name, strlen(dir->d_name), 0);
-                send(sock, "\r\n", 2, 0);
-            }
-            closedir(d);
-            send(sock, "226 Directory send OK.\r\n", 24, 0);
         } else if (strncmp(buffer, "RETR", 4) == 0) {
             char filename[256];
             sscanf(buffer + 5, "%s", filename);
 
-            FILE *file = fopen(filename, "rb");
+            // Construct full path to retrieve the file from the FTP directory
+            char full_path[512];
+            snprintf(full_path, sizeof(full_path), "%s/%s", FTP_DIRECTORY, filename);
+
+            FILE *file = fopen(full_path, "rb");
             if (!file) {
                 send(sock, "550 File not found.\r\n", 20, 0);
             } else {
